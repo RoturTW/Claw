@@ -1,6 +1,3 @@
-Here's a list of the endpoints for your Flask app hosted at `https://claw.rotur.dev`, along with their inputs, format, and a short description:
-
----
 
 ### 1. **Create Post**
 **Endpoint:** `https://claw.rotur.dev/post`  
