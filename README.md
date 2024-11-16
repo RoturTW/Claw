@@ -6,6 +6,7 @@ Url Inputs are done in the format of url parameters.
 /following?username=Mist
 ```
 
+---
 
 ### 1. **Create Post**
 **Endpoint:** `https://claw.rotur.dev/post`  
