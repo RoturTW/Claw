@@ -1,3 +1,11 @@
+Url Inputs are done in the format of url parameters.
+
+```
+/feed?limit=100
+
+/following?username=Mist
+```
+
 
 ### 1. **Create Post**
 **Endpoint:** `https://claw.rotur.dev/post`  
