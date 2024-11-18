@@ -4,6 +4,17 @@ import secrets
 import time
 from flask import Flask, request, jsonify
 
+import mimetypes
+import requests
+
+def is_valid_mime_type(url, allowed_types):
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=5)
+        content_type = response.headers.get("Content-Type", "")
+        return content_type in allowed_types
+    except requests.RequestException:
+        return False
+
 app = Flask(__name__)
 
 # File paths
@@ -88,13 +99,18 @@ def create_post():
     # Get attachment if available
     attachment = request.args.get('attachment')
     if attachment:
-        # Ensure it's a URL and not a data URI, and ensure it is under 500 characters
         if len(attachment) > 500:
-            return jsonify({"error": "Attachment URL exceeds 500 character limit"}), 400
-        if not attachment.startswith("https://"):
-            return jsonify({"error": "Attachment must be a valid image URL, not a data URI"}), 400
+    	    return jsonify({"error": "Attachment URL exceeds 500 character limit"}), 400
+        if not attachment.startswith("http://") and not attachment.startswith("https://"):
+            return jsonify({"error": "Attachment must be a valid URL"}), 400
     
+        # Verify MIME type
+        allowed_mime_types = ["image/png", "image/jpeg", "image/gif"]
+        if not is_valid_mime_type(attachment, allowed_mime_types):
+            return jsonify({"error": "Attachment must be a valid image (PNG, JPEG, GIF)"}), 400  
+  
     # Generate a unique ID using secrets
+
     new_post = {
         "id": secrets.token_hex(16),  # Unique ID for each post
         "content": content,
@@ -203,6 +219,8 @@ def get_profile():
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
+    auth_key = request.args.get('auth')
+
     # Convert the name to lowercase for case-insensitive comparison
     name_lower = name.lower()
 
@@ -217,6 +235,28 @@ def get_profile():
     # Get follower count
     followers_count = len(followers_data.get(user["username"], {}).get("followers", []))
 
+    # Get following count
+    following_count = len([
+        target for target, data in followers_data.items()
+        if user["username"] in data["followers"]
+    ])
+
+    # Initialize follow relationship info
+    is_following = None
+    is_followed_by = None
+
+    if auth_key:
+        # Authenticate the user with the provided auth key
+        authenticated_user = authenticate_with_key(auth_key)
+        if authenticated_user:
+            authenticated_username = authenticated_user["username"]
+
+            # Check if the authenticated user is following the target user
+            is_following = authenticated_username in followers_data.get(user["username"], {}).get("followers", [])
+
+            # Check if the target user is following the authenticated user
+            is_followed_by = user["username"] in followers_data.get(authenticated_username, {}).get("followers", [])
+
     # Return limited user data
     profile_data = {
         "username": user["username"],
@@ -224,8 +264,15 @@ def get_profile():
         "created": user.get("created"),
         "theme": user.get("theme"),
         "followers": followers_count,  # Number of followers
+        "following": following_count,  # Number of following
         "posts": user_posts[::-1]  # Reverse order of posts for latest first
     }
+
+    # Add follow relationship info if available
+    if auth_key:
+        profile_data["followed"] = is_following
+        profile_data["follows_me"] = is_followed_by
+
     return jsonify(profile_data), 200
 
 
