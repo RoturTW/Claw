@@ -4,8 +4,8 @@ import secrets
 import time
 from flask import Flask, request, jsonify
 
-import mimetypes
 import requests
+import threading
 
 def is_valid_mime_type(url, allowed_types):
     try:
@@ -18,11 +18,9 @@ def is_valid_mime_type(url, allowed_types):
 app = Flask(__name__)
 
 # File paths
-USERS_FILE_PATH = "/Users/mist/Documents/APIS/Files/users.json"
-LOCAL_POSTS_PATH = "/Users/mist/Documents/APIS/Files/posts.json"
-FOLLOWERS_FILE_PATH = "/Users/mist/Documents/APIS/Files/clawusers.json"
-
-from flask import make_response
+USERS_FILE_PATH = "./users.json"
+LOCAL_POSTS_PATH = "./posts.json"
+FOLLOWERS_FILE_PATH = "./clawusers.json"
 
 # Add this function to allow CORS
 def add_cors_headers(response):
@@ -43,6 +41,20 @@ def load_users():
     return []
 
 users = load_users()
+
+# Watch for changes in the users file and reload users
+def watch_users_file():
+    last_mtime = os.path.getmtime(USERS_FILE_PATH)
+    while True:
+        time.sleep(1)
+        current_mtime = os.path.getmtime(USERS_FILE_PATH)
+        if current_mtime != last_mtime:
+            global users
+            time.sleep(10)
+            users = load_users()
+            last_mtime = current_mtime
+
+threading.Thread(target=watch_users_file, daemon=True).start()
 
 # Load followers data
 def load_followers():
@@ -92,6 +104,12 @@ def create_post():
     if not content:
         return jsonify({"error": "Content is required"}), 400
 
+
+    os = request.args.get('os')
+    if os:
+        if not os in ["originOS","Constellinux","novaOS"]:
+            return jsonify({"error": "OS is invalid"}), 400
+
     # Check content length
     if len(content) > 100:
         return jsonify({"error": "Content exceeds 100 character limit"}), 400
@@ -100,7 +118,8 @@ def create_post():
     attachment = request.args.get('attachment')
     if attachment:
         if len(attachment) > 500:
-    	    return jsonify({"error": "Attachment URL exceeds 500 character limit"}), 400
+    	    return jsonify({"error": "Attachment URL exceeds 500 character limit"}), 40
+     
         if not attachment.startswith("http://") and not attachment.startswith("https://"):
             return jsonify({"error": "Attachment must be a valid URL"}), 400
     
@@ -119,6 +138,9 @@ def create_post():
         "timestamp": round(time.time() * 1000),  # Current timestamp
         "attachment": attachment if attachment else None  # Include attachment if available
     }
+    if os:
+        new_post["os"] = os
+
     posts.append(new_post)
     save_posts_local()  # Save posts locally after creation
     return jsonify(new_post), 201
@@ -128,7 +150,9 @@ def get_feed():
     limit = request.args.get('limit', 100, type=int)
     if limit > 100:
         limit = 100
-    return jsonify(posts[-limit:][::-1]), 200
+    offset = request.args.get('offset', 0, type=int)
+
+    return jsonify(posts[-limit-offset:-offset][::-1] if offset else posts[-limit:][::-1]), 200
 
 
 @app.route('/follow', methods=['GET'])
@@ -341,9 +365,14 @@ def rate_post():
 
 @app.route('/following_feed', methods=['GET'])
 def get_following_feed():
+    limit = request.args.get('limit', 100, type=int)
     auth_key = request.args.get("auth")
+
     if not auth_key:
         return jsonify({"error": "auth key is required"}), 403
+
+    if limit > 100:
+        limit = 100
 
     user = authenticate_with_key(auth_key)
     if not user:
@@ -360,7 +389,49 @@ def get_following_feed():
     # Fetch posts from the followed users
     following_posts = [post for post in posts if post["user"] in following]
 
-    return jsonify(following_posts), 200
+    return jsonify(following_posts[-limit:][::-1]), 200
+
+@app.route('/reply', methods=['GET'])
+def reply():
+    auth_key = request.args.get("auth")
+    if not auth_key:
+        return jsonify({"error": "auth key is required"}), 403
+
+    user = authenticate_with_key(auth_key)
+    if not user:
+        return jsonify({"error": "Invalid authentication key"}), 403
+
+    post_id = request.args.get("id")
+    if not post_id:
+        return jsonify({"error": "Post ID is required"}), 400
+
+    content = request.args.get("content")
+    if not content:
+        return jsonify({"error": "Content is required"}), 400
+
+    # Check content length
+    if len(content) > 100:
+        return jsonify({"error": "Content exceeds 100 character limit"}), 400
+
+    # Find the post by ID
+    post = next((post for post in posts if post["id"] == post_id), None)
+    if not post:
+        return jsonify({"error": "Post not found"}), 404
+
+    # Ensure the 'replies' key exists
+    if "replies" not in post:
+        post["replies"] = []
+
+    # Generate a unique ID using secrets
+    new_reply = {
+        "id": secrets.token_hex(16),  # Unique ID for each reply
+        "content": content,
+        "user": user["username"],  # User who replied
+        "timestamp": round(time.time() * 1000)  # Current timestamp
+    }
+
+    post["replies"].append(new_reply)
+    save_posts_local()
 
 
 if __name__ == '__main__':
