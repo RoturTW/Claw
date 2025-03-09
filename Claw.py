@@ -118,8 +118,8 @@ def create_post():
     attachment = request.args.get('attachment')
     if attachment:
         if len(attachment) > 500:
-    	    return jsonify({"error": "Attachment URL exceeds 500 character limit"}), 40
-     
+            return jsonify({"error": "Attachment URL exceeds 500 character limit"}), 400
+        
         if not attachment.startswith("http://") and not attachment.startswith("https://"):
             return jsonify({"error": "Attachment must be a valid URL"}), 400
     
@@ -432,6 +432,7 @@ def reply():
 
     post["replies"].append(new_reply)
     save_posts_local()
+    return jsonify(new_reply), 201
 
 
 if __name__ == '__main__':
