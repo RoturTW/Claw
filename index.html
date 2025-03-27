@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claw</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="nav-container">
+        <div class="logo">Claw</div>
+        <ul class="nav-menu" id="nav-menu">
+            <li><a href="#" id="nav-feed">Feed</a></li>
+            <li><a href="#" id="nav-profile">Profile</a></li>
+            <li><a href="#" id="nav-following">Following</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <!-- Auth section only shown when not authenticated -->
+        <div class="auth-container" id="auth-section">
+            <div id="auth-pre" class="auth-content">
+                <h2>Welcome to Claw</h2>
+                <p>Please authenticate to start using Claw</p>
+                <button id="auth-button" class="auth-btn">Authenticate</button>
+            </div>
+            <div id="auth-post" class="auth-content hidden">
+                <div class="auth-token-display">
+                    <p>Your token: <span id="auth-token"></span></p>
+                </div>
+                <button id="logout-button" class="auth-btn">Logout</button>
+            </div>
+        </div>
+
+        <!-- Main content only visible when authenticated -->
+        <div id="authenticated-content" class="hidden">
+            <div class="post-container" id="post-section">
+                <h2>Create Post</h2>
+                <div class="post-input">
+                    <textarea id="post-content" placeholder="What's on your mind? (max 100 characters)" maxlength="100"></textarea>
+                    <input type="text" id="post-attachment" placeholder="Add attachment URL (optional)">
+                    <button id="create-post">Post</button>
+                </div>
+            </div>
+
+            <div class="search-container" id="search-section">
+                <h2>Search User</h2>
+                <div class="search-input">
+                    <input type="text" id="username-search" placeholder="Enter username">
+                    <button id="search-profile">Search</button>
+                </div>
+            </div>
+
+            <div id="feed-section" class="section-container">
+                <h2>Feed</h2>
+                <div class="feed-controls">
+                    <button id="load-feed">Load Feed</button>
+                    <button id="load-following-feed">Following Feed</button>
+                </div>
+                <div id="feed-content" class="card-container"></div>
+            </div>
+
+            <div id="profile-section" class="section-container hidden">
+                <h2>Profile</h2>
+                <div id="profile-info" class="profile-card"></div>
+                <div id="profile-posts" class="card-container"></div>
+            </div>
+
+            <div id="following-section" class="section-container hidden">
+                <h2>Following/Followers</h2>
+                <div class="follow-controls">
+                    <input type="text" id="follow-username" placeholder="Username">
+                    <button id="follow-btn">Follow</button>
+                    <button id="unfollow-btn">Unfollow</button>
+                </div>
+                <div class="follow-list-controls">
+                    <input type="text" id="list-username" placeholder="Username">
+                    <button id="get-followers">Get Followers</button>
+                    <button id="get-following">Get Following</button>
+                </div>
+                <div id="follow-list" class="card-container"></div>
+            </div>
+        </div>
+        
+        <div class="footer-spacer"></div>
+    </div>
+
+    <div class="theme-toggle" id="theme-toggle">
+        <svg id="theme-icon" viewBox="0 0 24 24">
+            <path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10v-20zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12z"/>
+        </svg>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
